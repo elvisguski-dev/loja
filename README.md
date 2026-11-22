@@ -25,11 +25,29 @@ Variáveis: `PORT` (8082), `LOJA_DB` (caminho do banco; os arquivos ficam em `ar
 
 ## Hospedagem (precisa de servidor, não funciona em GitHub Pages)
 
-Os downloads são protegidos por login, então o site precisa rodar em um servidor:
-- **VPS** barata (Hetzner, Contabo, Oracle Free) com `systemd` + Caddy (HTTPS automático); ou
-- **Docker** (`Dockerfile` incluso) em Fly.io/Railway/Render com **volume persistente** montado em `/dados` — sem volume você perde clientes e arquivos a cada deploy.
+Os downloads são protegidos por login e os arquivos ficam em disco, então a loja precisa de um servidor **com disco que não apaga**. Opções (limites verificados em nov/2026; confira antes de contratar):
 
-Use sempre **HTTPS** (o cookie de sessão é `HttpOnly` + `SameSite=Lax`, e `Secure` quando o proxy envia `X-Forwarded-Proto: https`). Faça backup da pasta `dados/`.
+| Opção | Custo | Serve? |
+|---|---|---|
+| **Oracle Cloud "Always Free"** (VM Ubuntu) | grátis, pede cartão só para verificar | **Melhor grátis**: disco persistente e sem dormir. Atenção: a cota gratuita diminuiu em jun/2026, falta de capacidade é comum e VMs quase sem uso podem ser recolhidas |
+| **Seu próprio PC + Cloudflare Tunnel** | grátis | Funciona, mas o PC precisa ficar ligado |
+| Render / Koyeb (plano grátis) | grátis | **Não recomendado**: dormem e/ou apagam o disco, você perderia clientes e arquivos |
+| VPS paga (Hetzner, Contabo…) | ~R$ 25–40/mês | Mais estável, mesmo script de instalação |
+
+### Instalação em uma VM Ubuntu/Debian (Oracle ou VPS)
+
+1. Crie a VM (Ubuntu 22.04/24.04) e, no painel do provedor, libere as portas **80 e 443** (Oracle: *Security List* da sub-rede).
+2. Opcional, mas recomendado: um domínio grátis em [duckdns.org](https://www.duckdns.org) apontando para o IP da VM.
+3. Na VM, como root:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/elvisguski-dev/loja/main/deploy/instalar-vps.sh -o instalar.sh
+sudo bash instalar.sh meu-dominio.duckdns.org
+```
+
+O script instala tudo, ativa **HTTPS automático (Caddy)**, cria o serviço que reinicia sozinho, gera a senha do admin (anote!) e agenda **backup diário** em `/var/backups/loja`. Para atualizar: `git -C /opt/loja pull && systemctl restart loja`.
+
+Também há um `Dockerfile` (use um **volume persistente** em `/dados`). Use sempre HTTPS; o cookie de sessão é `HttpOnly` + `SameSite=Lax` e `Secure` atrás do proxy. Baixe cópias do backup de vez em quando para fora do servidor.
 
 ## Segurança
 
