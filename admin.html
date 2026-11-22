@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin · Loja</title>
+<style>
+:root{--bg:#050a07;--card:#0a130d;--ink:#c9f7d8;--mut:#6fae86;--line:#134d2c;--pri:#00ff88;--err:#ff5470;--warn:#ffb020}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-monospace,Consolas,monospace}
+header{border-bottom:1px solid var(--line);background:#020604}
+.top{max-width:1100px;margin:auto;display:flex;gap:6px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+.top b{color:var(--pri);margin-right:12px}
+nav button{background:none;color:var(--mut);box-shadow:none}nav button.on,nav button:hover{background:rgba(0,255,136,.12);color:var(--pri)}
+main{max-width:1100px;margin:auto;padding:18px 16px 60px}
+h2{color:var(--pri);margin:0 0 12px}h3{color:var(--pri);margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+button,a.b{border:0;border-radius:6px;padding:8px 13px;font:inherit;font-weight:700;background:var(--pri);color:#021a0b;cursor:pointer;text-decoration:none;display:inline-block}
+button.s{background:rgba(0,255,136,.1);color:var(--pri);border:1px solid var(--line)}
+button.d{background:rgba(255,84,112,.15);color:var(--err);border:1px solid #6b1d2c}
+button.sm{padding:4px 9px;font-size:12px}
+input,textarea,select{width:100%;font:inherit;padding:8px 10px;border-radius:6px;border:1px solid var(--line);background:#050a07;color:var(--ink)}
+textarea{min-height:80px}
+label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin-bottom:3px}
+.f{margin-bottom:10px}.fg{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;color:var(--mut);background:#08160d}
+.mut{color:var(--mut)}.sm{font-size:12px}
+.chip{display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;background:#14201a;color:var(--mut);margin:1px}
+.chip.ok{background:rgba(0,255,136,.15);color:var(--pri)}.chip.x{background:rgba(255,84,112,.15);color:var(--err)}
+dialog{background:var(--card);color:var(--ink);border:1px solid var(--pri);border-radius:10px;width:min(560px,94vw);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.8)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#06210f;color:var(--pri);border:1px solid var(--pri);padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:.25s;z-index:20}
+#toast.on{opacity:1}#toast.err{background:#2a0d14;color:var(--err);border-color:var(--err)}
+.bar{height:8px;background:#14201a;border-radius:4px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--pri);width:0}
+.arq{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding:6px 0;flex-wrap:wrap}
+pre{white-space:pre-wrap;background:#050a07;border:1px dashed var(--line);padding:10px;border-radius:6px;margin:0}
+</style>
+</head>
+<body>
+<header><div class="top"><b>⚙ admin</b><nav class="row" id="nav"></nav><span class="sp"></span><a class="b s sm" style="background:none;color:var(--mut)" href="/" target="_blank">ver loja ↗</a></div></header>
+<main id="app"></main>
+<dialog id="dlg"></dialog><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(m,u,b){const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.erro||'Erro '+r.status);return j}
+let tt;const toast=(t,e)=>{const x=$('#toast');x.textContent=t;x.className='on'+(e?' err':'');clearTimeout(tt);tt=setTimeout(()=>x.className='',e?5000:2200)};
+const tryit=async f=>{try{return await f()}catch(e){toast(e.message,true)}};
+const modal=h=>{$('#dlg').innerHTML=h;$('#dlg').showModal()};const fechar=()=>$('#dlg').close();
+const mb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+const dataBR=s=>s?String(s).slice(0,10).split('-').reverse().join('/'):'';
+let D=null,V='programas';
+const TABS=[['programas','Programas'],['clientes','Clientes e acessos'],['downloads','Downloads'],['loja','Loja']];
+async function go(v){V=v||V;D=await api('GET','/api/admin/resumo');
+  $('#nav').innerHTML=TABS.map(([k,n])=>`<button class="${k===V?'on':''}" onclick="go('${k}')">${n}</button>`).join('');
+  ({programas:vProg,clientes:vCli,downloads:vDown,loja:vLoja})[V]()}
+
+/* ---- programas ---- */
+function vProg(){$('#app').innerHTML=`<div class="row"><h2 class="sp" style="margin:0">Programas</h2><button onclick="prodModal()">+ Novo programa</button></div><div style="height:12px"></div>
+ ${D.produtos.map(p=>`<div class="card"><div class="row"><span style="font-size:26px">${esc(p.icone)}</span><h3 class="sp">${esc(p.nome)} ${p.ativo?'':'<span class="chip x">oculto</span>'}</h3><span class="mut">${esc(p.preco)}</span><button class="s sm" onclick="prodModal(${p.id})">Editar</button></div>
+  <div class="mut sm">${esc(p.resumo)}</div>
+  <div style="margin-top:10px"><label>Arquivos para download</label>
+  ${p.arquivos.map(a=>`<div class="arq"><b>${esc(a.nome)}</b><span class="chip">${esc(a.plataforma)}</span>${a.versao?`<span class="chip">v${esc(a.versao)}</span>`:''}<span class="mut sm">${mb(a.tamanho)} · ${dataBR(a.criado)}</span><span class="sp"></span><button class="d sm" onclick="delArq(${a.id})">Remover</button></div>`).join('')||'<div class="mut sm">Nenhum arquivo ainda.</div>'}
+  <div class="fg" style="margin-top:8px;align-items:end"><div><label>Arquivo (.zip, .exe…)</label><input type="file" id="up${p.id}"></div><div><label>Versão</label><input id="uv${p.id}" placeholder="1.0.0"></div><div><label>Plataforma</label><input id="ul${p.id}" value="Windows"></div><div><label>Novidades (opcional)</label><input id="un${p.id}"></div></div>
+  <div class="row" style="margin-top:8px"><button onclick="sobe(${p.id})">⬆ Enviar arquivo</button><span class="sm mut" id="ust${p.id}"></span></div><div class="bar" id="ub${p.id}" style="display:none"><i></i></div></div></div>`).join('')||'<div class="card mut">Cadastre o primeiro programa (ex.: PetAgenda, OrçaZap, PhotoFesta).</div>'}`}
+function prodModal(id){const p=id?D.produtos.find(x=>x.id==id):{icone:'📦',ativo:1};
+ modal(`<h2>${id?'Editar':'Novo'} programa</h2><div class="fg"><div class="f"><label>Nome</label><input id="p_n" value="${esc(p.nome||'')}"></div><div class="f"><label>Ícone (emoji)</label><input id="p_i" value="${esc(p.icone)}"></div></div>
+ <div class="f"><label>Resumo (uma linha)</label><input id="p_r" value="${esc(p.resumo||'')}"></div><div class="f"><label>Descrição completa</label><textarea id="p_d">${esc(p.descricao||'')}</textarea></div>
+ <div class="f"><label>Preço (texto livre)</label><input id="p_p" value="${esc(p.preco||'')}" placeholder="Mensal R$ 49 · Trimestral R$ 129 · Anual R$ 449"></div>
+ <label class="row" style="text-transform:none;font-size:13px;color:var(--ink)"><input type="checkbox" id="p_a" style="width:auto" ${p.ativo?'checked':''}> Visível na vitrine</label>
+ <div class="row" style="margin-top:12px">${id?`<button class="d" onclick="delProd(${id})">Excluir</button>`:''}<span class="sp"></span><button class="s" onclick="fechar()">Cancelar</button><button onclick="salvaProd(${id||0})">Salvar</button></div>`)}
+const salvaProd=id=>tryit(async()=>{const b={nome:$('#p_n').value,icone:$('#p_i').value,resumo:$('#p_r').value,descricao:$('#p_d').value,preco:$('#p_p').value,ativo:$('#p_a').checked};
+ id?await api('PUT','/api/admin/produtos/'+id,b):await api('POST','/api/admin/produtos',b);fechar();go()});
+const delProd=id=>{if(confirm('Excluir o programa, seus arquivos e os acessos liberados?'))tryit(async()=>{await api('DELETE','/api/admin/produtos/'+id);fechar();go()})};
+const delArq=id=>{if(confirm('Remover este arquivo? Os clientes não poderão mais baixar.'))tryit(async()=>{await api('DELETE','/api/admin/arquivos/'+id);go()})};
+function sobe(id){const f=$('#up'+id).files[0];if(!f)return toast('Escolha um arquivo',true);
+  const q=new URLSearchParams({nome:f.name,versao:$('#uv'+id).value,plataforma:$('#ul'+id).value,notas:$('#un'+id).value});
+  const x=new XMLHttpRequest();x.open('POST',`/api/admin/produtos/${id}/arquivos?`+q);x.setRequestHeader('Content-Type','application/octet-stream');
+  const bar=$('#ub'+id);bar.style.display='block';
+  x.upload.onprogress=e=>{if(e.lengthComputable){bar.firstElementChild.style.width=(e.loaded/e.total*100)+'%';$('#ust'+id).textContent=`${mb(e.loaded)} de ${mb(e.total)}`}};
+  x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(e){}if(x.status===200){toast('Arquivo enviado!');go()}else toast(j.erro||'Falha no envio',true)};
+  x.onerror=()=>toast('Falha de conexão no envio',true);x.send(f)}
+
+/* ---- clientes ---- */
+function vCli(){$('#app').innerHTML=`<div class="row"><h2 class="sp" style="margin:0">Clientes e acessos</h2><button onclick="cliModal()">+ Novo cliente</button></div><div style="height:12px"></div>
+ <table><tr><th>Cliente</th><th>Programas liberados</th><th>Baixou</th><th></th></tr>
+ ${D.clientes.map(c=>{const ac=D.acessos.filter(a=>a.cliente_id==c.id);return `<tr><td><b>${esc(c.nome||'—')}</b> ${c.ativo?'':'<span class="chip x">bloqueado</span>'}<br><span class="mut sm">${esc(c.email)}${c.whatsapp?' · '+esc(c.whatsapp):''}</span></td>
+ <td>${ac.map(a=>{const venc=a.ate&&a.ate<new Date().toISOString().slice(0,10);return `<div><span class="chip ${a.ativo&&!venc?'ok':'x'}">${esc(a.pnome)}${a.ate?' até '+dataBR(a.ate):''}${venc?' (vencido)':''}${a.ativo?'':' (desligado)'}</span> <button class="s sm" onclick="acessoModal(${c.id},${a.produto_id})">editar</button> <button class="s sm" onclick="togAcesso(${a.id},${a.ativo?0:1})">${a.ativo?'desligar':'ligar'}</button> <button class="d sm" onclick="delAcesso(${a.id})">✕</button></div>`}).join('')||'<span class="mut">nenhum</span>'}</td>
+ <td>${c.baixou}</td><td style="white-space:nowrap"><button class="sm" onclick="acessoModal(${c.id})">+ Liberar programa</button> <button class="s sm" onclick="novaSenha(${c.id})">Nova senha</button> <button class="s sm" onclick="togCli(${c.id},${c.ativo?0:1})">${c.ativo?'Bloquear':'Desbloquear'}</button> <button class="d sm" onclick="delCli(${c.id})">✕</button></td></tr>`}).join('')||'<tr><td colspan="4" class="mut">Nenhum cliente ainda.</td></tr>'}</table>`}
+const optProd=sel=>D.produtos.map(p=>`<option value="${p.id}" ${p.id==sel?'selected':''}>${esc(p.nome)}</option>`).join('');
+function cliModal(){modal(`<h2>Novo cliente</h2><div class="fg"><div class="f"><label>E-mail (login)</label><input id="c_e" type="email"></div><div class="f"><label>Nome</label><input id="c_n"></div><div class="f"><label>WhatsApp</label><input id="c_w"></div><div class="f"><label>Senha (vazio = gerar)</label><input id="c_s"></div></div>
+ <h3 style="margin:8px 0">Liberar programa agora (opcional)</h3><div class="fg"><div class="f"><label>Programa</label><select id="c_p"><option value="">— nenhum —</option>${optProd()}</select></div><div class="f"><label>Acesso até (vazio = sem limite)</label><input id="c_a" type="date"></div></div>
+ <div class="f"><label>Chave de licença (cole aqui a chave gerada)</label><textarea id="c_k"></textarea></div>
+ <div class="row"><span class="sp"></span><button class="s" onclick="fechar()">Cancelar</button><button onclick="criaCli()">Criar</button></div>`)}
+const criaCli=()=>tryit(async()=>{const r=await api('POST','/api/admin/clientes',{email:$('#c_e').value,nome:$('#c_n').value,whatsapp:$('#c_w').value,senha:$('#c_s').value,produto_id:$('#c_p').value||null,chave:$('#c_k').value,ate:$('#c_a').value});
+  mostraCred(r.email,r.senha,$('#c_n').value);go()});
+function mostraCred(email,senha,nome){const t=`Olá${nome?' '+nome:''}! Seu acesso foi liberado 🎉\n\nSite: ${location.origin}\nE-mail: ${email}\nSenha: ${senha}\n\nEntre, baixe o programa e copie sua chave de licença. Recomendo trocar a senha no primeiro acesso.`;
+ modal(`<h2>Acesso criado</h2><p class="mut sm">Copie e envie ao cliente. A senha só aparece agora.</p><pre id="cred">${esc(t)}</pre><div class="row" style="margin-top:10px"><span class="sp"></span><button onclick="copiaCred()">Copiar mensagem</button><button class="s" onclick="fechar()">Fechar</button></div>`);window._cred=t}
+const copiaCred=()=>{try{navigator.clipboard.writeText(window._cred)}catch(e){}toast('Mensagem copiada')};
+function acessoModal(cid,pid){const a=pid?D.acessos.find(x=>x.cliente_id==cid&&x.produto_id==pid):{};const c=D.clientes.find(x=>x.id==cid);
+ modal(`<h2>Liberar programa</h2><p class="mut sm">${esc(c.email)}</p><div class="fg"><div class="f"><label>Programa</label><select id="a_p">${optProd(pid)}</select></div><div class="f"><label>Acesso até (vazio = sem limite)</label><input id="a_a" type="date" value="${esc(a.ate||'')}"></div></div>
+ <div class="f"><label>Chave de licença</label><textarea id="a_k">${esc(a.chave||'')}</textarea></div><div class="f"><label>Observação (aparece para o cliente)</label><input id="a_o" value="${esc(a.obs||'')}" placeholder="Ex.: Plano anual"></div>
+ <div class="row"><span class="sp"></span><button class="s" onclick="fechar()">Cancelar</button><button onclick="salvaAcesso(${cid})">Salvar</button></div>`)}
+const salvaAcesso=cid=>tryit(async()=>{await api('POST','/api/admin/acessos',{cliente_id:cid,produto_id:$('#a_p').value,chave:$('#a_k').value,ate:$('#a_a').value,obs:$('#a_o').value});fechar();toast('Acesso salvo');go()});
+const togAcesso=(id,v)=>tryit(async()=>{await api('PUT','/api/admin/acessos/'+id,{ativo:!!v});go()});
+const delAcesso=id=>{if(confirm('Remover este acesso?'))tryit(async()=>{await api('DELETE','/api/admin/acessos/'+id);go()})};
+const novaSenha=id=>{if(confirm('Gerar uma nova senha? A atual deixa de funcionar.'))tryit(async()=>{const r=await api('POST',`/api/admin/clientes/${id}/nova-senha`);const c=D.clientes.find(x=>x.id==id);mostraCred(c.email,r.senha,c.nome)})};
+const togCli=(id,v)=>tryit(async()=>{await api('PUT','/api/admin/clientes/'+id,{ativo:!!v});go()});
+const delCli=id=>{if(confirm('Excluir o cliente e todos os acessos dele?'))tryit(async()=>{await api('DELETE','/api/admin/clientes/'+id);go()})};
+
+/* ---- downloads / loja ---- */
+function vDown(){$('#app').innerHTML=`<h2>Últimos downloads</h2><table><tr><th>Quando</th><th>Cliente</th><th>Arquivo</th><th>IP</th></tr>${D.downloads.map(d=>`<tr><td>${esc(d.quando)}</td><td>${esc(d.email||'')}</td><td>${esc(d.arquivo||'')} ${d.versao?'v'+esc(d.versao):''}</td><td class="mut">${esc(d.ip)}</td></tr>`).join('')||'<tr><td colspan="4" class="mut">Nenhum download ainda.</td></tr>'}</table>`}
+function vLoja(){const c=D.config;$('#app').innerHTML=`<h2>Dados da loja</h2><div class="card"><div class="f"><label>Nome da loja</label><input id="l_n" value="${esc(c.nome_loja)}"></div><div class="f"><label>Frase de apresentação</label><input id="l_d" value="${esc(c.descricao)}"></div>
+ <div class="f"><label>Seu WhatsApp (com DDI e DDD, só números — ex.: 5551999990000)</label><input id="l_w" value="${esc(c.whatsapp)}"></div><div class="f"><label>Rodapé</label><input id="l_r" value="${esc(c.rodape)}"></div><button onclick="salvaLoja()">Salvar</button></div>`}
+const salvaLoja=()=>tryit(async()=>{await api('PUT','/api/admin/config',{nome_loja:$('#l_n').value,descricao:$('#l_d').value,whatsapp:$('#l_w').value,rodape:$('#l_r').value});toast('Salvo');go()});
+go('programas').catch(e=>$('#app').innerHTML='<div class="card">'+esc(e.message)+'</div>');
+</script>
+</body>
+</html>

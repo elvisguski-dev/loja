@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050a07">
+<title>Loja de programas</title>
+<style>
+:root{--bg:#050a07;--card:#0a130d;--ink:#c9f7d8;--mut:#6fae86;--line:#134d2c;--pri:#00ff88;--err:#ff5470;--warn:#ffb020}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,rgba(0,255,136,.08),transparent 60%),var(--bg);color:var(--ink);font:15px/1.5 ui-monospace,'JetBrains Mono','Cascadia Code',Consolas,monospace;min-height:100vh}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.16) 3px)}
+header{border-bottom:1px solid var(--line);background:#020604}
+.top{max-width:1050px;margin:auto;display:flex;align-items:center;gap:14px;padding:14px 18px;flex-wrap:wrap}
+.logo{font-weight:800;font-size:19px;color:var(--pri);text-shadow:0 0 12px rgba(0,255,136,.5);cursor:pointer}
+.logo::before{content:"> ";opacity:.7}.logo::after{content:"_";animation:b 1.1s steps(1) infinite}@keyframes b{50%{opacity:0}}
+.sp{flex:1}
+main{max-width:1050px;margin:auto;padding:26px 18px 70px}
+h1{font-size:clamp(26px,5vw,40px);margin:0 0 8px;color:var(--pri);text-shadow:0 0 14px rgba(0,255,136,.35);letter-spacing:-.5px}
+h2{color:var(--pri);margin:0 0 12px}
+.lead{color:var(--mut);max-width:640px;margin:0 0 28px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px;box-shadow:0 0 0 1px rgba(0,255,136,.05)}
+.card:hover{border-color:#1d6b3f}
+.ic{font-size:34px}
+.card h3{margin:8px 0 4px;color:var(--pri)}
+.mut{color:var(--mut)}.preco{font-weight:800;font-size:18px;margin:10px 0}
+button,a.b{border:0;border-radius:6px;padding:10px 16px;font:inherit;font-weight:700;background:var(--pri);color:#021a0b;cursor:pointer;text-decoration:none;display:inline-block;box-shadow:0 0 12px rgba(0,255,136,.3)}
+button.s,a.b.s{background:rgba(0,255,136,.1);color:var(--pri);border:1px solid var(--line);box-shadow:none}
+button.sm{padding:6px 12px;font-size:13px}
+input,textarea{width:100%;font:inherit;padding:10px 12px;border-radius:6px;border:1px solid var(--line);background:#050a07;color:var(--ink)}
+input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 1px var(--pri)}
+label{display:block;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.f{margin-bottom:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chip{display:inline-block;padding:2px 9px;border-radius:3px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#14201a;color:var(--mut)}
+.chip.ok{background:rgba(0,255,136,.15);color:var(--pri)}.chip.x{background:rgba(255,84,112,.15);color:var(--err)}
+.arq{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.arq .i{flex:1;min-width:200px}
+.chave{background:#050a07;border:1px dashed var(--line);border-radius:6px;padding:10px;word-break:break-all;font-size:12px;max-height:120px;overflow:auto}
+dialog{background:var(--card);color:var(--ink);border:1px solid var(--pri);border-radius:10px;width:min(440px,94vw);padding:22px;box-shadow:0 0 30px rgba(0,255,136,.25)}
+dialog::backdrop{background:rgba(0,0,0,.8)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#06210f;color:var(--pri);border:1px solid var(--pri);padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:.25s;z-index:20}
+#toast.on{opacity:1}#toast.err{background:#2a0d14;color:var(--err);border-color:var(--err)}
+.desc{white-space:pre-wrap;font-size:13px}
+footer{text-align:center;color:var(--mut);font-size:12px;padding:20px}
+@media (prefers-reduced-motion:reduce){.logo::after{animation:none}}
+</style>
+</head>
+<body>
+<header><div class="top"><div class="logo" onclick="home()" id="nome">loja</div><span class="sp"></span><span id="acoes"></span></div></header>
+<main id="app"></main>
+<footer id="rod"></footer>
+<dialog id="dlg"></dialog><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(m,u,b){const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.erro||'Erro '+r.status);return j}
+let tt;const toast=(t,e)=>{const x=$('#toast');x.textContent=t;x.className='on'+(e?' err':'');clearTimeout(tt);tt=setTimeout(()=>x.className='',e?4500:2200)};
+const tryit=async f=>{try{return await f()}catch(e){toast(e.message,true)}};
+const mb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+const dataBR=s=>s?String(s).slice(0,10).split('-').reverse().join('/'):'';
+let P=null,C=null;
+async function init(){P=await api('GET','/api/publico');C=await api('GET','/api/conta');
+  document.title=P.loja.nome_loja;$('#nome').textContent=P.loja.nome_loja;$('#rod').textContent=P.loja.rodape||'';
+  $('#acoes').innerHTML=C.logado?`<button class="s sm" onclick="conta()">Minha conta</button> <button class="s sm" onclick="sair()">Sair</button>`:`<button class="sm" onclick="entrar()">Entrar</button>`;
+  C.logado&&location.hash==='#conta'?conta():home()}
+function home(){location.hash='';
+  $('#app').innerHTML=`<h1>${esc(P.loja.nome_loja)}</h1><p class="lead">${esc(P.loja.descricao)}</p>
+  <div class="grid">${P.produtos.map(p=>`<div class="card"><div class="ic">${esc(p.icone)}</div><h3>${esc(p.nome)}</h3><div class="mut">${esc(p.resumo)}</div>
+   ${p.preco?`<div class="preco">${esc(p.preco)}</div>`:''}${p.versao?`<div class="mut" style="font-size:12px">versão ${esc(p.versao)}</div>`:''}
+   <div class="row" style="margin-top:12px">${p.comprar?`<a class="b" target="_blank" rel="noopener" href="${esc(p.comprar)}">Comprar pelo WhatsApp</a>`:''}${p.descricao?`<button class="s" onclick="detalhe(${p.id})">Detalhes</button>`:''}</div></div>`).join('')||'<div class="card mut">Em breve.</div>'}</div>
+  ${C.logado?'':'<p class="mut" style="margin-top:28px">Já comprou? <a href="#" onclick="entrar();return false" style="color:var(--pri)">Entre na sua conta</a> para baixar o programa e ver sua licença.</p>'}`}
+function detalhe(id){const p=P.produtos.find(x=>x.id==id);modal(`<h2>${esc(p.icone)} ${esc(p.nome)}</h2><div class="desc">${esc(p.descricao)}</div>${p.preco?`<div class="preco">${esc(p.preco)}</div>`:''}<div class="row"><span class="sp"></span><button class="s" onclick="fechar()">Fechar</button>${p.comprar?`<a class="b" target="_blank" rel="noopener" href="${esc(p.comprar)}">Comprar pelo WhatsApp</a>`:''}</div>`)}
+const modal=h=>{$('#dlg').innerHTML=h;$('#dlg').showModal()};const fechar=()=>$('#dlg').close();
+function entrar(){modal(`<h2>Entrar</h2><div class="f"><label>E-mail</label><input id="l_e" type="email" autocomplete="username"></div><div class="f"><label>Senha</label><input id="l_s" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"></div>
+ <p class="mut" style="font-size:12px">Seu acesso é enviado pelo vendedor após a compra.${P.loja.whatsapp?` Esqueceu a senha? <a style="color:var(--pri)" target="_blank" rel="noopener" href="https://wa.me/${P.loja.whatsapp}">Fale pelo WhatsApp</a>.`:''}</p>
+ <div class="row"><span class="sp"></span><button class="s" onclick="fechar()">Cancelar</button><button onclick="login()">Entrar</button></div>`);setTimeout(()=>$('#l_e').focus(),50)}
+const login=()=>tryit(async()=>{await api('POST','/api/login',{email:$('#l_e').value,senha:$('#l_s').value});fechar();location.hash='#conta';await init()});
+const sair=()=>tryit(async()=>{await api('POST','/api/logout');location.hash='';await init()});
+function conta(){location.hash='#conta';
+  $('#app').innerHTML=`<h1>Minha conta</h1><p class="lead">Olá${C.nome?', '+esc(C.nome):''}! (${esc(C.email)})</p>
+  ${C.acessos.map(a=>`<div class="card" style="margin-bottom:14px"><div class="row"><span class="ic">${esc(a.icone)}</span><h3 style="margin:0" class="sp">${esc(a.produto)}</h3>${a.ativo?'<span class="chip ok">ativo</span>':'<span class="chip x">expirado / bloqueado</span>'}</div>
+   ${a.ate?`<div class="mut" style="margin-top:6px">Acesso até ${dataBR(a.ate)}</div>`:''}${a.obs?`<div class="mut">${esc(a.obs)}</div>`:''}
+   ${a.chave?`<div style="margin-top:12px"><label>Sua chave de licença</label><div class="chave" id="k${esc(a.produto)}">${esc(a.chave)}</div><button class="s sm" style="margin-top:6px" onclick="copia(this)" data-k="${esc(a.chave)}">Copiar chave</button></div>`:''}
+   ${a.ativo?`<div style="margin-top:12px"><label>Downloads</label>${a.arquivos.map(f=>`<div class="arq"><div class="i"><b>${esc(f.nome)}</b> <span class="chip">${esc(f.plataforma)}</span>${f.versao?` <span class="chip">v${esc(f.versao)}</span>`:''}<div class="mut" style="font-size:12px">${mb(f.tamanho)} · ${dataBR(f.criado)}${f.notas?' · '+esc(f.notas):''}</div>${f.sha256?`<div class="mut" style="font-size:10px;word-break:break-all">SHA-256: ${esc(f.sha256)}</div>`:''}</div><a class="b" href="/download/${f.id}">⬇ Baixar</a></div>`).join('')||'<div class="mut">Nenhum arquivo publicado ainda.</div>'}</div>`
+   :`<p class="mut">Seu acesso terminou. ${C.whatsapp?`<a style="color:var(--pri)" target="_blank" rel="noopener" href="https://wa.me/${C.whatsapp}">Renove pelo WhatsApp</a>.`:'Fale com o vendedor para renovar.'}</p>`}</div>`).join('')||'<div class="card mut">Você ainda não tem programas liberados. Se já pagou, fale com o vendedor.</div>'}
+  <button class="s" onclick="senhaModal()">Trocar minha senha</button>`}
+const copia=b=>{try{navigator.clipboard.writeText(b.dataset.k)}catch(e){}toast('Chave copiada')};
+function senhaModal(){modal(`<h2>Trocar senha</h2><div class="f"><label>Senha atual</label><input id="s_a" type="password"></div><div class="f"><label>Nova senha (mín. 8 caracteres)</label><input id="s_n" type="password"></div><div class="row"><span class="sp"></span><button class="s" onclick="fechar()">Cancelar</button><button onclick="trocaSenha()">Salvar</button></div>`)}
+const trocaSenha=()=>tryit(async()=>{await api('POST','/api/conta/senha',{atual:$('#s_a').value,nova:$('#s_n').value});fechar();toast('Senha alterada')});
+init();
+</script>
+</body>
+</html>
